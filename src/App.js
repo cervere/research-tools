@@ -1,7 +1,7 @@
 import React, { useEffect, StrictMode }  from 'react';
 import './App.css';
 import HomePage from './components/HomePage';
-import {BrowserRouter} from "react-router-dom" 
+import {HashRouter as Router} from "react-router-dom" 
 
 const App = () => {
 
@@ -66,9 +66,9 @@ const App = () => {
 
   return (
 <StrictMode> 
-    <BrowserRouter>     
+    <Router>     
       <HomePage />
-    </BrowserRouter> 
+    </Router> 
 </StrictMode>
   )
 };
