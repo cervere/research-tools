@@ -3,7 +3,8 @@ import CollapseButton from './CollapseButton';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SearchIcon from '@mui/icons-material/Search';
-import { ReactComponent as Logo } from './logo-cropped.svg';
+// import { ReactComponent as Logo } from './logo-cropped.svg';
+import logoImg from './logo.png';
 import {
   Route,
   Link,
@@ -26,7 +27,8 @@ const HomePage = () => {
           <nav>
             {/* <a href="#0" aria-label="forecastr logo" className="logo"> */}
               {/* <svg> */}
-                <Logo />
+                {/* <Logo /> */}
+                <img src={logoImg} alt="Logo" />
               {/* </svg> */}
             {/* </a> */}
             <button className="toggle-mob-menu" aria-expanded="false" aria-label="open menu">

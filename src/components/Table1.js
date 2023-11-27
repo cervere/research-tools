@@ -44,6 +44,7 @@ function Table1() {
   const [dataTypesValidated, setDataTypesValidated] = useState(false);
   const [statistics, setStatistics] = useState([]);
   const [statisticsHeader, setStatisticsHeader] = useState([]);
+  const [disableStatistics, setDisableStatistics] = useState(true);
   const [showStatistics, setShowStatistics] = useState(false);
   const [elements, setElements] = useState([]);
   const [expanded, setExpanded] = useState(false);
@@ -191,7 +192,7 @@ function Table1() {
             }
           ]}
           onFinalize={onUpdateDataTypes}
-          actionLabel="Update Data Types"
+          actionLabel="Validate"
         />
         }
         newElems[3] = {
@@ -217,7 +218,10 @@ function Table1() {
     if(dataTypesValidated) {
       const dataByFeaturesComplex = getDataByFeaturesComplex(dataToAnalyze, columnMetadata, outcome)
       setDataByFeatureRows(dataByFeaturesComplex);
-    }
+      if(dataToAnalyze.length > 0 || dataByFeaturesComplex) {
+        setDisableStatistics(false);
+      }
+      }
   }, [dataTypesValidated, dataToAnalyze, columnMetadata, outcome])
 
   const getColumnDTypes = (datasetByFeature) => {
@@ -365,7 +369,6 @@ function Table1() {
 
   const handleCalculateStatistics = (e) => {
     e.preventDefault();
-    setShowStatistics(!showStatistics); 
     const stats = calculateStatisticsByCategory(dataByFeatureRows, columnMetadata, outcome);
     const statsForDisplay = [];
     const outcomeValues = Object.keys(stats);
@@ -385,6 +388,8 @@ function Table1() {
       statsForDisplay.push(...flatRows);
     })
     setStatistics(statsForDisplay);
+    setShowStatistics(true);
+    setDisableStatistics(true);
     // setShowStatistics(true)
     // setStatistics([...statistics, { columnName, ...stats }]);
   };
@@ -395,17 +400,17 @@ function Table1() {
       <CsvUploader onDataParsed={handleDataParsed} />
       {/* <DataTable data={data} /> */}
       <Button sx={{margin: "20px 10px;"}} 
-      disabled={dataToAnalyze.length === 0 || !dataByFeatureRows}
+      disabled={disableStatistics}
       onClick={handleCalculateStatistics} 
       variant="contained" color="secondary"> 
       Calculate Statistics 
       </Button>
-      <Button 
+      {/* <Button 
       disabled={dataToAnalyze.length === 0}
       variant="contained" 
       onClick={() => exportToDocx(statistics)}> 
       Export to DOCX 
-      </Button>
+      </Button> */}
       {showStatistics && <TableDisplay 
         columns={statisticsHeader}
         // columns={Object.keys(statistics[0]).map((col) => (

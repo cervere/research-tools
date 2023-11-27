@@ -60,11 +60,11 @@ const WordSelector = ({ words, onFinalize, actionLabel }) => {
         </div>
       </div>
       {
-      excludedWords?.length > 0 &&
+      // excludedWords?.length > 0 &&
       <div style={{ width: '100%', marginBottom: '20px' }}>
         <h3>{words[1].label} {excludedWords && `(${excludedWords.length})`} </h3>
         <div style={{ width: '100%', border: '1px solid #ccc', padding: '10px' }}>
-          {excludedWords.map((wordObj, index) => (
+          {excludedWords && excludedWords.map((wordObj, index) => (
             <span
               key={index}
               style={wordObj.style ? ({...wordStyle, ...wordObj.style}) : wordStyle}
