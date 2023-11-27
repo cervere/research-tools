@@ -33,11 +33,15 @@ const columns = columnsOfInterest.map((col) => (
 
 function Table1() {
   const [data, setData] = useState([]);
+  const [parsedResult, setParsedResult] = useState();
   const [parsedData, setParsedData] = useState([]);
   const [columnsFound, setColumnsFound] = useState([]);
   const [outcome, setOutcome] = useState();
+  const [outcomeTemp, setOutcomeTemp] = useState();
+  const [outcomeObject, setOutcomeObject] = useState();
   const [finalColumns, setFinalColumns] = useState([]);
   const [finalColumnsStatus, setFinalColumnsStatus] = useState('');
+  const [includedExcludedColumns, setIncludedExcludedColumns] = useState();
   const [dataToAnalyze, setDataToAnalyze] = useState([]);
   const [dataByFeatureRows, setDataByFeatureRows] = useState();
   const [columnMetadata, setColumnMetadata] = useState();
@@ -48,6 +52,9 @@ function Table1() {
   const [showStatistics, setShowStatistics] = useState(false);
   const [elements, setElements] = useState([]);
   const [expanded, setExpanded] = useState(false);
+  const [onOutcomeSelect, setOnOutcomeSelect] = useState((event, newValue) => {
+    setOutcomeTemp(newValue);
+  });
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
@@ -55,15 +62,24 @@ function Table1() {
 
   
   const handleDataParsed = (parsedResult) => {
+    setParsedResult(parsedResult);
+    refreshContent(parsedResult);
+  };
+
+  const refreshContent = (parsedResult) => {
     const parsedColumns = parsedResult.meta?.fields;
     setColumnsFound(parsedColumns);
     const parsedData = parsedResult.data;
     setParsedData(parsedData);
     setOutcome();
+    setIncludedExcludedColumns();
     setFinalColumns([]);
     setDataToAnalyze([]);
-    setElements([]);
-  };
+    // setElements([]);
+    setShowStatistics(false);
+    setDisableStatistics(true);
+    setStatistics();
+  }
 
   useEffect(() => {
     if(columnsFound.length > 0) {
@@ -73,7 +89,7 @@ function Table1() {
         description: '',
         element:  <Autocomplete
         onChange={(event, newValue) => {
-          setOutcome(newValue);
+          setOutcomeTemp(newValue)
         }}
         id="select-outcome"
         options={columnsFound}
@@ -85,9 +101,39 @@ function Table1() {
     }
   }, [columnsFound]);
 
+
+  useEffect(() => {
+    if(outcomeTemp) {
+      setOutcomeObject({
+        previous: outcome,
+        current: outcomeTemp
+      })
+    }
+  }, [outcomeTemp])
+
+  useEffect(() => {
+    if(outcomeObject) {
+      setOutcome(outcomeObject.current);
+    }
+  }, [outcomeObject])
+  
   useEffect(() => {
     if(outcome) {
       setExpanded(false);
+      const includeExcludeColumns = includedExcludedColumns?.slice()
+      if(includeExcludeColumns) {
+        const currIncludeColumns = includeExcludeColumns[0];
+        const currExcludeColumns = includeExcludeColumns[1];
+        includeExcludeColumns[0] = currIncludeColumns.filter(({word}) => word !== outcome);
+        includeExcludeColumns[1] = currExcludeColumns.filter(({word}) => word !== outcome);
+        const previousOutcome = outcomeObject.previous;
+        if(includeExcludeColumns[0].length < currIncludeColumns.length) {
+          includeExcludeColumns[0].push({word: previousOutcome})
+        } else if(includeExcludeColumns[1].length < currExcludeColumns.length) {
+          includeExcludeColumns[1].push({word: previousOutcome})
+        }
+        setIncludedExcludedColumns(includeExcludeColumns);
+      }
       const newElems = [...elements];
       newElems[0] = {
         ...elements[0],
@@ -99,20 +145,34 @@ function Table1() {
         // SO that custom styling can be added!!
         element:  <WordSelector 
         words={[
-          {label: "Inclusion", words: mySplice(columnsFound, outcome).slice(0,20).map((word) => ({word}))},  
-          {label: "Exclusion", words: mySplice(columnsFound, outcome).slice(20).map((word) => ({word}))}
+          {
+            label: "Inclusion", 
+            words: includeExcludeColumns ? includeExcludeColumns[0] : mySplice(columnsFound, outcome).slice(0,20).map((word) => ({word}))
+          },  
+          {
+            label: "Exclusion",
+            words: includeExcludeColumns ? includeExcludeColumns[1] : mySplice(columnsFound, outcome).slice(20).map((word) => ({word}))
+          }
         ]}
         onFinalize={onFinalize}
         actionLabel="Confirm Selection"
       /> 
       }
       setElements(newElems);
-    } 
+    } else if (columnsFound.length > 0) {
+      const newElems = [elements[0]];
+      newElems[0] = {
+        ...elements[0],
+        description: ``
+      }
+      setElements(newElems);
+    }
   }, [outcome])
 
 
   const onFinalize = (wordsBySection) => {
     const includedWords = wordsBySection[0]; 
+    setIncludedExcludedColumns(wordsBySection)
     setFinalColumns([...(includedWords.map(({word}) => word)), outcome]);
     setFinalColumnsStatus(`${includedWords.length} features chosen`);
     setExpanded(false);
@@ -124,7 +184,6 @@ function Table1() {
     setColumnMetadata({
       numeric, 
       category,
-      category_doubt: [],
       fields: [...numeric, ...category]
     });
     setDataTypesValidated(true);
@@ -168,13 +227,9 @@ function Table1() {
       columnMetadata['category'] = Object.keys(columnDataTypes).filter((feature) => columnDataTypes[feature] === 'CATEGORY');
       columnMetadata['category_doubt'] = Object.keys(columnDataTypes).filter((feature) => columnDataTypes[feature] === 'CATEGORY_DOUBT');
       columnMetadata['numeric'] = Object.keys(columnDataTypes).filter((feature) => columnDataTypes[feature] === 'NUMERIC');
-      setColumnMetadata(columnMetadata);
+      // setColumnMetadata(columnMetadata);
       setDataTypesValidated(false);
-    }
-  }, [finalColumns, dataToAnalyze])
-
-  useEffect(() => {
-    if(finalColumns.length > 0) {
+    
       const newElems = elements.slice(0,2);
       if(columnMetadata) {
         newElems[2] = {
@@ -211,11 +266,17 @@ function Table1() {
         }
         setElements(newElems);
         }
+    }
+  }, [finalColumns, dataToAnalyze])
+
+  useEffect(() => {
+    if(finalColumns.length > 0) {
+
     } 
   }, [columnMetadata]);
 
   useEffect(() => {
-    if(dataTypesValidated) {
+    if(outcome && columnMetadata && dataTypesValidated && dataToAnalyze.length > 0) {
       const dataByFeaturesComplex = getDataByFeaturesComplex(dataToAnalyze, columnMetadata, outcome)
       setDataByFeatureRows(dataByFeaturesComplex);
       if(dataToAnalyze.length > 0 || dataByFeaturesComplex) {
@@ -320,6 +381,7 @@ function Table1() {
         })
       }
     })
+    console.log(outcome, categoryField, stats)
     row[`${outcome}_pvalue`] = stats['pvalue'][categoryField].pValue.toFixed(3);
     return row
   }
@@ -381,8 +443,7 @@ function Table1() {
       const flatRow = flattenNumericRowObj(numericRow);
       statsForDisplay.push(...flatRow);
     })
-    const categoricalColumns = [...columnMetadata.category, ...columnMetadata.category_doubt]
-    categoricalColumns.forEach((categoryField, i) => {
+    columnMetadata.category.forEach((categoryField, i) => {
       const cagtegoryRow = getCategoryRow(stats, categoryField);
       const flatRows = flattenCategoryRowObj(cagtegoryRow)
       statsForDisplay.push(...flatRows);
@@ -404,6 +465,14 @@ function Table1() {
       onClick={handleCalculateStatistics} 
       variant="contained" color="secondary"> 
       Calculate Statistics 
+      </Button>
+      <Button sx={{margin: "20px 10px;"}} 
+      disabled={!parsedResult}
+      onClick={() => {
+        refreshContent(parsedResult)
+      }} 
+      variant="contained" color="secondary"> 
+      Refresh Content 
       </Button>
       {/* <Button 
       disabled={dataToAnalyze.length === 0}

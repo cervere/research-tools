@@ -1,27 +1,98 @@
 import jStat from 'jstat';
+import {chiSquaredGoodnessOfFit} from 'simple-statistics';
+
+const mean = arr => arr.reduce((acc, val) => acc + val, 0) / arr.length;
+
+// Function to calculate standard deviation
+const standardDeviation = arr => {
+  const avg = mean(arr);
+  const squaredDiffs = arr.map(val => Math.pow(val - avg, 2));
+  const variance = mean(squaredDiffs);
+  return Math.sqrt(variance);
+};
+
+// Standardize the data (z-score normalization)
+const standardize = arr => {
+  const avg = mean(arr);
+  const sd = standardDeviation(arr);
+  return arr.map(val => (val - avg) / sd);
+};
+
 
 const calculateCorrelationAndPValue = (colA, colB) => {
-    // Calculate Pearson correlation coefficient
-    const correlationCoefficient = jStat.corrcoeff(colA, colB);
 
-    // Calculate p-value for the correlation coefficient
-    const n = colA.length;
+    
+    // Standardize both columns
+    const standardizedColA = standardize(colA);
+    const standardizedColB = standardize(colB);
+    // Calculate Pearson correlation coefficient
+    const correlationCoefficient = jStat.corrcoeff(standardizedColA, standardizedColB);
+
+    // // Calculate p-value for the correlation coefficient
+    const n = standardizedColA.length;
     const pValue = jStat.ttest(correlationCoefficient, n - 2, 2);
 
+    // // Fisher transformation to Z-score
+    // const transformed = 0.5 * Math.log((1 + correlationCoefficient) / (1 - correlationCoefficient));
+    // const standardError = 1 / Math.sqrt(n - 3); // For Pearson correlation
+
+    // // Calculate Z-score
+    // const zScore = transformed / standardError;
+    // console.log( zScore , transformed,  standardError)
+
+
+    // // Calculate the p-value from the Z-score
+    // const pValue = 2 * jStat.normal.cdf(-Math.abs(zScore)); // For two-tailed test
     return {correlationCoefficient, pValue}
+}
+
+const calculateCorrelationNumericField = (values) => {
+    // Assuming outcome is categorical
+    const anovaResult = {F: jStat.anovafscore(values), p: jStat.anovaftest(...values)};
+    console.log('One-Way ANOVA Result:');
+    console.log('F-Statistic:', anovaResult.F);
+    console.log('P-Value:', anovaResult.p);
+    return {coef: anovaResult.F, pValue: anovaResult.p}
+}
+
+const calculateCorrelationCategoryField = (observed) => {
+    // Assuming outcome is categorical
+    // Perform Chi-Square test
+    const chiSquareResult = chiSquaredGoodnessOfFit(observed);
+
+    console.log('Chi-Square Test Result:');
+    console.log('Chi-Square Statistic:', chiSquareResult);
+    console.log('Degrees of Freedom:', chiSquareResult.df);
+    console.log('P-Value:', chiSquareResult.p);
+    return {coef: chiSquareResult.df, pValue: chiSquareResult.p}
 }
 
 export const getCorrelationCoeffs = (dataByFeatureRows, columnMetadata, outcome) => {
     const correlationMetrics = {}
     const totalSample = dataByFeatureRows['Sample']
     columnMetadata.numeric.forEach((feature) => {
-        const  corrCoefs = calculateCorrelationAndPValue(totalSample[feature]['values'],
-                                                        totalSample[feature][outcome])
+        const dataByOutcomeValues = {};
+        const standardizedValues = standardize(totalSample[feature].values);
+        standardizedValues.forEach((value, i) => {
+            const outcomeValue = totalSample[feature][outcome][i]
+            const featureValues = dataByOutcomeValues[outcomeValue] || [];
+            featureValues.push(value);
+            dataByOutcomeValues[outcomeValue] = featureValues
+        })
+        const corrCoefs = calculateCorrelationNumericField(Object.values(dataByOutcomeValues))
+        // const  corrCoefs = calculateCorrelationAndPValue(totalSample[feature]['values'], totalSample[feature][outcome])
         correlationMetrics[feature] = corrCoefs;
     })
     columnMetadata.category.forEach((feature) => {
-        const  corrCoefs = calculateCorrelationAndPValue(totalSample[feature]['values_encoded'],
-                                                        totalSample[feature][outcome])
+        const dataByOutcomeValues = {};
+        const standardizedValues = standardize(totalSample[feature]['values_encoded']);
+        standardizedValues.forEach((value, i) => {
+            const outcomeValue = totalSample[feature][outcome][i]
+            const featureValues = dataByOutcomeValues[outcomeValue] || [];
+            featureValues.push(value);
+            dataByOutcomeValues[outcomeValue] = featureValues
+        })
+        const  corrCoefs = calculateCorrelationCategoryField(Object.values(dataByOutcomeValues))
         correlationMetrics[feature] = corrCoefs;
     })
     return correlationMetrics;
@@ -122,7 +193,7 @@ export const calculateStatisticsByCategory = (dataByFeatureRows, columnMetadata,
                 mean, variance, stdDeviation, notNullCount
             }
         };
-        ([...columnMetadata.category]).forEach((catField) => {
+        for (const catField of columnMetadata.category) {
             const values = valuesByFeature[catField]['values'];
             const notNullCount = values.length;
             const countsMap = new Map();
@@ -137,7 +208,7 @@ export const calculateStatisticsByCategory = (dataByFeatureRows, columnMetadata,
                     count, pct
                 }
             }
-        })
+        }
         statsByOutcome[outcome] = statsByFeature
     });
     const pvalueByFeature = {}

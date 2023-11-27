@@ -62,10 +62,10 @@ const HomePage = () => {
                 </div>
                 <span>made by </span>
                 <a href="https://github.com/cervere" target="_blank">
-                  <i class="fab fa-github"></i>
+                  <i className="fab fa-github"></i>
                 </a>
                 <a href="https://twitter.com/7cervere7" target="_blank">
-                  <i class="fab fa-twitter"></i>
+                  <i className="fab fa-twitter"></i>
                 </a>
                 <CollapseButton />
               </li>
