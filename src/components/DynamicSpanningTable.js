@@ -107,7 +107,7 @@ export default function DynamicSpanningTable({columns, data}) {
     };
   
     const getOutcomeHeader = (outcome) => {
-        console.log(uniqueOutcomes)
+        // console.log(uniqueOutcomes)
         return (
         [<TableRow>
             <TableCell align="center" colSpan={2} />

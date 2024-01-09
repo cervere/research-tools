@@ -1,4 +1,5 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, createContext, useContext} from 'react';
+import { DataContext } from '../context/DataContext.js';
 import CollapseButton from './CollapseButton';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -12,10 +13,54 @@ import {
 } from "react-router-dom";
 import Table1 from './Table1';
 import Dashboard from './Dashboard';
-
+import Figures from './Figures';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import PrepareData from './PrepareData';
+import DeriveColumns from './utils/DeriveColumns';
+import Button from '@mui/material/Button';
+import DataViz from './DataViz';
+import BubbleChartIcon from '@mui/icons-material/BubbleChart';
+import TableChartIcon from '@mui/icons-material/TableChart';
 
 
 const HomePage = () => {
+  const { preparedData, setPreparedData, 
+    figuresReady, setFiguresReady, 
+    statisticsReady, setStatisticsReady,
+  showStatistics } = useContext(DataContext);
+
+  const [links, setLinks] = useState([]);
+
+  useEffect(() => {
+    console.log(showStatistics, figuresReady);
+    setLinks([
+      {
+        route: "/articles",
+        icon: <AutoStoriesIcon />,
+        title: 'Pages',
+        active: false
+      },
+      {
+        route: "/prepare",
+        icon: <AutoStoriesIcon />,
+        title: 'Data Preparation',
+        active: true 
+      },
+      {
+        route: "/tables",
+        icon: <TableChartIcon />,
+        title: 'Table 1',
+        active: showStatistics && preparedData 
+      },
+      {
+        route: "/figures",
+        icon: <BubbleChartIcon />,
+        title: 'Figures',
+        active: figuresReady && preparedData 
+      }
+    ])
+  }, [showStatistics, figuresReady, preparedData])
+
     return (
       <div>
         <svg style={{display:"none"}}>
@@ -40,18 +85,16 @@ const HomePage = () => {
               <li className="menu-heading">
                 <h3>Admin</h3>
               </li>
-              {/* <li>
-              <Link to="/articles">
-                <AutoStoriesIcon />
-                <span>Pages</span>
-              </Link>
-              </li> */}
-              <li>
-              <Link to="/tables">
-                <AutoStoriesIcon />
-                <span>Table 1</span>
-              </Link>
-              </li>
+              {
+                links.filter(({active}) => active).map(({route, icon, title}, i) => (
+                <li key={i}>
+                <Link to={route}>
+                 {icon} 
+                  <span>{title}</span>
+                </Link>
+                </li>
+                ))
+              }
               <li>
                 <div className="switch" style={{display: 'none'}}>
                   <input type="checkbox" id="mode" defaultChecked />
@@ -73,23 +116,6 @@ const HomePage = () => {
           </nav>
         </header>
       <section className="page-content">
-        {/* <section className="search-and-user">
-          <form>
-            <input type="search" placeholder="Search Pages..." />
-            <button type="submit" aria-label="submit form">
-              <svg aria-hidden="true">
-              <SearchIcon />
-              </svg>
-            </button>
-          </form>
-          <div className="admin-profile">
-            <span className="greeting">Hello admin</span>
-            <div className="notifications">
-              <span className="badge">1</span>
-              <AccountCircleIcon />
-            </div>
-          </div>
-        </section> */}
         <Routes>
           <Route 
           path="/articles"
@@ -98,9 +124,42 @@ const HomePage = () => {
           }
           />
           <Route 
+          path="/prepare"
+          element={
+            <PrepareData />
+          }
+          />
+          <Route 
+          path="/viz"
+          element={
+            <DataViz 
+            setPreparedData={setPreparedData} 
+            setFiguresReady={setFiguresReady}  
+            setStatisticsReady={setStatisticsReady}
+            />
+          }
+          />
+           <Route 
+          path="/derive"
+          element={
+            preparedData ? <DeriveColumns data={preparedData} /> 
+            : <Button variant="outlined" color="error">
+                            <Link to="/prepare">
+                            Please select a dataset
+              </Link>
+          </Button>
+          }
+          />
+          <Route 
           path="/tables"
           element={
-            <Table1 />
+            <Table1 setPreparedData={setPreparedData} setFiguresReady={setFiguresReady}/>
+          }
+          />
+          <Route 
+          path="/figures"
+          element={
+            <Figures preparedData={preparedData} />
           }
           />
         </Routes>
@@ -117,3 +176,6 @@ const HomePage = () => {
   };
   
 export default HomePage;
+
+
+

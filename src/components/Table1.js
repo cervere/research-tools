@@ -1,310 +1,16 @@
 // MainComponent.js
-import React, { useState, useEffect } from 'react';
-import CsvUploader from './CsvUploader';
-import DataTable from './DataTable';
-import calculateStatistics from '../utils/StatsUtils';
-import {exportToDocx} from './DocExporter.js';
+import React, { useContext, useState} from 'react';
+import { DataContext } from '../context/DataContext.js';
 import Button from '@mui/material/Button';
 import TableDisplay from './TableDisplay';
-import GenericAccordians from './utils/GenericAccordians';
-import WordSelector from './utils/WordSelector';
-import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
-import { getDataByFeatures, getDataByFeaturesComplex, calculateStatisticsByCategory } from './utils/Stats';
-import Papa from 'papaparse';
-
-const columnsOfInterest = ['SUBJID', 'SEX', 'AGEYR', 'EDCCNT', 'APOE4', 'ADASTS11', 'LABEL'];
-
-const mySplice = (yourArray, elementToRemove) => {
-  const index = yourArray.indexOf(elementToRemove);    
-  if (index !== -1) {
-    return [...yourArray.slice(0, index), ...yourArray.slice(index+1)];
-  } 
-  return yourArray;
-}
-
-const columns = columnsOfInterest.map((col) => (
-        {
-    accessorKey: col,
-    header: col,
-    size: 40,
-  }));
-
+import { getDataByFeatures, getDataByFeaturesComplex, calculateStatisticsByCategory } from '../utils/Stats';
+import { mySplice } from '../utils/ArrayUtils.js';
 
 function Table1() {
-  const [data, setData] = useState([]);
-  const [parsedResult, setParsedResult] = useState();
-  const [parsedData, setParsedData] = useState([]);
-  const [columnsFound, setColumnsFound] = useState([]);
-  const [outcome, setOutcome] = useState();
-  const [outcomeTemp, setOutcomeTemp] = useState();
-  const [outcomeObject, setOutcomeObject] = useState();
-  const [finalColumns, setFinalColumns] = useState([]);
-  const [finalColumnsStatus, setFinalColumnsStatus] = useState('');
-  const [includedExcludedColumns, setIncludedExcludedColumns] = useState();
-  const [dataToAnalyze, setDataToAnalyze] = useState([]);
-  const [dataByFeatureRows, setDataByFeatureRows] = useState();
-  const [columnMetadata, setColumnMetadata] = useState();
-  const [dataTypesValidated, setDataTypesValidated] = useState(false);
+  const {preparedData, showStatistics} = useContext(DataContext);
   const [statistics, setStatistics] = useState([]);
   const [statisticsHeader, setStatisticsHeader] = useState([]);
-  const [disableStatistics, setDisableStatistics] = useState(true);
-  const [showStatistics, setShowStatistics] = useState(false);
-  const [elements, setElements] = useState([]);
-  const [expanded, setExpanded] = useState(false);
-  const [onOutcomeSelect, setOnOutcomeSelect] = useState((event, newValue) => {
-    setOutcomeTemp(newValue);
-  });
 
-  const handleChange = (panel) => (event, isExpanded) => {
-    setExpanded(isExpanded ? panel : false);
-  };
-
-  
-  const handleDataParsed = (parsedResult) => {
-    setParsedResult(parsedResult);
-    refreshContent(parsedResult);
-  };
-
-  const refreshContent = (parsedResult) => {
-    const parsedColumns = parsedResult.meta?.fields;
-    setColumnsFound(parsedColumns);
-    const parsedData = parsedResult.data;
-    setParsedData(parsedData);
-    setOutcome();
-    setIncludedExcludedColumns();
-    setFinalColumns([]);
-    setDataToAnalyze([]);
-    // setElements([]);
-    setShowStatistics(false);
-    setDisableStatistics(true);
-    setStatistics();
-  }
-
-  useEffect(() => {
-    if(columnsFound.length > 0) {
-      const newElems = [...elements];
-      newElems[0] = {
-        title: 'Select the outcome of interest',
-        description: '',
-        element:  <Autocomplete
-        onChange={(event, newValue) => {
-          setOutcomeTemp(newValue)
-        }}
-        id="select-outcome"
-        options={columnsFound}
-        sx={{ width: 300 }}
-        renderInput={(params) => <TextField {...params} label={"Outcome"} />}
-      />
-      }
-      setElements(newElems);
-    }
-  }, [columnsFound]);
-
-
-  useEffect(() => {
-    if(outcomeTemp) {
-      setOutcomeObject({
-        previous: outcome,
-        current: outcomeTemp
-      })
-    }
-  }, [outcomeTemp])
-
-  useEffect(() => {
-    if(outcomeObject) {
-      setOutcome(outcomeObject.current);
-    }
-  }, [outcomeObject])
-  
-  useEffect(() => {
-    if(outcome) {
-      setExpanded(false);
-      const includeExcludeColumns = includedExcludedColumns?.slice()
-      if(includeExcludeColumns) {
-        const currIncludeColumns = includeExcludeColumns[0];
-        const currExcludeColumns = includeExcludeColumns[1];
-        includeExcludeColumns[0] = currIncludeColumns.filter(({word}) => word !== outcome);
-        includeExcludeColumns[1] = currExcludeColumns.filter(({word}) => word !== outcome);
-        const previousOutcome = outcomeObject.previous;
-        if(includeExcludeColumns[0].length < currIncludeColumns.length) {
-          includeExcludeColumns[0].push({word: previousOutcome})
-        } else if(includeExcludeColumns[1].length < currExcludeColumns.length) {
-          includeExcludeColumns[1].push({word: previousOutcome})
-        }
-        setIncludedExcludedColumns(includeExcludeColumns);
-      }
-      const newElems = [...elements];
-      newElems[0] = {
-        ...elements[0],
-        description: `Outcome Selected : ${outcome}`
-      }
-      newElems[1] = {
-        title: 'Select the columns of interest',
-        description: '',
-        // SO that custom styling can be added!!
-        element:  <WordSelector 
-        words={[
-          {
-            label: "Inclusion", 
-            words: includeExcludeColumns ? includeExcludeColumns[0] : mySplice(columnsFound, outcome).slice(0,20).map((word) => ({word}))
-          },  
-          {
-            label: "Exclusion",
-            words: includeExcludeColumns ? includeExcludeColumns[1] : mySplice(columnsFound, outcome).slice(20).map((word) => ({word}))
-          }
-        ]}
-        onFinalize={onFinalize}
-        actionLabel="Confirm Selection"
-      /> 
-      }
-      setElements(newElems);
-    } else if (columnsFound.length > 0) {
-      const newElems = [elements[0]];
-      newElems[0] = {
-        ...elements[0],
-        description: ``
-      }
-      setElements(newElems);
-    }
-  }, [outcome])
-
-
-  const onFinalize = (wordsBySection) => {
-    const includedWords = wordsBySection[0]; 
-    setIncludedExcludedColumns(wordsBySection)
-    setFinalColumns([...(includedWords.map(({word}) => word)), outcome]);
-    setFinalColumnsStatus(`${includedWords.length} features chosen`);
-    setExpanded(false);
-  }
-
-  const onUpdateDataTypes = (wordsBySection) => {
-    const numeric = wordsBySection[0].map(({word}) => word);
-    const category = wordsBySection[1].map(({word}) => word);
-    setColumnMetadata({
-      numeric, 
-      category,
-      fields: [...numeric, ...category]
-    });
-    setDataTypesValidated(true);
-    setExpanded(false);
-  }
-
-  useEffect(() => {
-    if(finalColumns.length > 0){
-      if(finalColumnsStatus) {
-        const newElems = [...elements];
-        newElems[1] = {
-          ...elements[1],
-          description: finalColumnsStatus
-        }
-        setElements(newElems);
-      } else {
-        const newElems = [...elements];
-        newElems[1] = {
-          ...elements[1],
-          description: ''
-        }
-        setElements(newElems);
-      }
-      const subset = parsedData.map((row) => {
-        const newRow = {}
-        finalColumns.forEach((key) => {
-            newRow[key] = row[key]
-        });
-        return newRow;
-    })
-    setDataToAnalyze(subset);
-    }
-  }, [finalColumns, parsedData]);
-
-  useEffect(() => {
-    if(dataToAnalyze.length > 0 && finalColumns.length > 1) {
-      const dataByFeatures = getDataByFeatures(dataToAnalyze, mySplice(finalColumns, outcome), outcome);
-      const columnDataTypes = getColumnDTypes(dataByFeatures['Sample']);
-      const columnMetadata = {}
-      columnMetadata['fields'] = Array.from(Object.keys(columnDataTypes));
-      columnMetadata['category'] = Object.keys(columnDataTypes).filter((feature) => columnDataTypes[feature] === 'CATEGORY');
-      columnMetadata['category_doubt'] = Object.keys(columnDataTypes).filter((feature) => columnDataTypes[feature] === 'CATEGORY_DOUBT');
-      columnMetadata['numeric'] = Object.keys(columnDataTypes).filter((feature) => columnDataTypes[feature] === 'NUMERIC');
-      // setColumnMetadata(columnMetadata);
-      setDataTypesValidated(false);
-    
-      const newElems = elements.slice(0,2);
-      if(columnMetadata) {
-        newElems[2] = {
-          title: `Validate Data Types`,
-          description: '',
-          element: <WordSelector 
-          words={[
-            {label: "Numerical", words: columnMetadata.numeric.map((word) => ({word}))}, 
-            {
-              label: `Categorical`, 
-              words: [
-                ...columnMetadata.category.map((word) => ({word})),
-                ...(columnMetadata.category_doubt.map((word) => ({word, style: {backgroundColor: '#FFF44F'}})))
-              ]
-            }
-          ]}
-          onFinalize={onUpdateDataTypes}
-          actionLabel="Validate"
-        />
-        }
-        newElems[3] = {
-          title: 'Preview Data for Analysis',
-          description: '',
-          element: <TableDisplay 
-          columns={finalColumns.map((col) => (
-            {
-              accessorKey: col,
-              header: col,
-              size: 40,
-            }))
-          }
-          data={dataToAnalyze}
-          />
-        }
-        setElements(newElems);
-        }
-    }
-  }, [finalColumns, dataToAnalyze])
-
-  useEffect(() => {
-    if(finalColumns.length > 0) {
-
-    } 
-  }, [columnMetadata]);
-
-  useEffect(() => {
-    if(outcome && columnMetadata && dataTypesValidated && dataToAnalyze.length > 0) {
-      const dataByFeaturesComplex = getDataByFeaturesComplex(dataToAnalyze, columnMetadata, outcome)
-      setDataByFeatureRows(dataByFeaturesComplex);
-      if(dataToAnalyze.length > 0 || dataByFeaturesComplex) {
-        setDisableStatistics(false);
-      }
-      }
-  }, [dataTypesValidated, dataToAnalyze, columnMetadata, outcome])
-
-  const getColumnDTypes = (datasetByFeature) => {
-    const featureDTypes = {}
-    Object.keys(datasetByFeature).forEach((feature) => {
-      featureDTypes[feature] = getDType(datasetByFeature[feature].slice(0, 10))
-    })
-    return featureDTypes;
-  }
-
-  const getDType = (sample) => {
-    const unique = Array.from(new Set(sample));
-    if(typeof unique[0] === 'string' && typeof unique[1] === 'string') {
-      return 'CATEGORY'
-    } else if (unique.length < sample.length/2) {
-      // for 0's and 1's 
-      return 'CATEGORY_DOUBT'
-    } else {
-      return 'NUMERIC'
-    }
-  }
-  
   const getStatsTableHeader = (outcome, outcomeValues, measuresPerOutcome) => {
     const featureHeader = []
     featureHeader.push({
@@ -355,7 +61,7 @@ function Table1() {
   }
 
 
-  const getNumericRow = (stats, numericField) => {
+  const getNumericRow = (stats, numericField, outcome) => {
     const outcomeValues = Object.keys(stats).filter((key) => key !== 'pvalue');
     const row = {feature: numericField};
     outcomeValues.forEach((outcome) => {
@@ -367,7 +73,7 @@ function Table1() {
     return row
   }
 
-  const getCategoryRow = (stats, categoryField) => {
+  const getCategoryRow = (stats, categoryField, outcome) => {
     const outcomeValues = Object.keys(stats).filter((key) => key !== 'pvalue');;
     const row = {feature: categoryField};
     outcomeValues.forEach((outcome) => {
@@ -381,7 +87,6 @@ function Table1() {
         })
       }
     })
-    console.log(outcome, categoryField, stats)
     row[`${outcome}_pvalue`] = stats['pvalue'][categoryField].pValue.toFixed(3);
     return row
   }
@@ -431,7 +136,9 @@ function Table1() {
 
   const handleCalculateStatistics = (e) => {
     e.preventDefault();
-    const stats = calculateStatisticsByCategory(dataByFeatureRows, columnMetadata, outcome);
+    const {dataToAnalyze, columnMetadata, finalColumns, outcome} = preparedData;
+    const dataByFeaturesComplex = getDataByFeaturesComplex(dataToAnalyze, columnMetadata, outcome)
+    const stats = calculateStatisticsByCategory(dataByFeaturesComplex, columnMetadata, outcome);
     const statsForDisplay = [];
     const outcomeValues = Object.keys(stats);
     const features = mySplice(finalColumns, outcome)
@@ -439,18 +146,16 @@ function Table1() {
     const statsColumnHeader = getStatsTableHeader(outcome, outcomeValues, keyMeasuresPerOutcome);
     setStatisticsHeader(statsColumnHeader);
     columnMetadata.numeric.forEach((numericField, i) => {
-      const numericRow = getNumericRow(stats, numericField);
+      const numericRow = getNumericRow(stats, numericField, outcome);
       const flatRow = flattenNumericRowObj(numericRow);
       statsForDisplay.push(...flatRow);
     })
     columnMetadata.category.forEach((categoryField, i) => {
-      const cagtegoryRow = getCategoryRow(stats, categoryField);
+      const cagtegoryRow = getCategoryRow(stats, categoryField, outcome);
       const flatRows = flattenCategoryRowObj(cagtegoryRow)
       statsForDisplay.push(...flatRows);
     })
     setStatistics(statsForDisplay);
-    setShowStatistics(true);
-    setDisableStatistics(true);
     // setShowStatistics(true)
     // setStatistics([...statistics, { columnName, ...stats }]);
   };
@@ -458,21 +163,11 @@ function Table1() {
   
   return (
     <div>
-      <CsvUploader onDataParsed={handleDataParsed} />
-      {/* <DataTable data={data} /> */}
       <Button sx={{margin: "20px 10px;"}} 
-      disabled={disableStatistics}
+      disabled={!showStatistics}
       onClick={handleCalculateStatistics} 
       variant="contained" color="secondary"> 
       Calculate Statistics 
-      </Button>
-      <Button sx={{margin: "20px 10px;"}} 
-      disabled={!parsedResult}
-      onClick={() => {
-        refreshContent(parsedResult)
-      }} 
-      variant="contained" color="secondary"> 
-      Refresh Content 
       </Button>
       {/* <Button 
       disabled={dataToAnalyze.length === 0}
@@ -480,7 +175,8 @@ function Table1() {
       onClick={() => exportToDocx(statistics)}> 
       Export to DOCX 
       </Button> */}
-      {showStatistics && <TableDisplay 
+      {showStatistics && 
+      <TableDisplay 
         columns={statisticsHeader}
         // columns={Object.keys(statistics[0]).map((col) => (
         //   {
@@ -489,17 +185,7 @@ function Table1() {
         //     size: 40,
         //   }))}
         data={statistics}
-        />}
-      {
-        elements.length > 0 &&
-        <GenericAccordians 
-        elements={elements}
-        expanded={expanded}
-        handleChange={handleChange}
-        />
-      }
-      {
-        
+      />
       }
     </div>
   );

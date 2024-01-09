@@ -1,5 +1,6 @@
 import jStat from 'jstat';
 import {chiSquaredGoodnessOfFit} from 'simple-statistics';
+import anova1 from '@stdlib/stats-anova1';
 
 const mean = arr => arr.reduce((acc, val) => acc + val, 0) / arr.length;
 
@@ -19,18 +20,27 @@ const standardize = arr => {
 };
 
 
-const calculateCorrelationAndPValue = (colA, colB) => {
-
-    
+export const calculateCorrelationAndPValue = (colA, colB) => {    
     // Standardize both columns
+    // Assuming colB is groups
+    const groups = {}
+    colB.forEach((outcomeValue, i) => {
+        if(outcomeValue in groups) {
+
+        } else {
+            groups[outcomeValue] = []
+        }
+        groups[outcomeValue].push(colA[i]);
+    })
     const standardizedColA = standardize(colA);
     const standardizedColB = standardize(colB);
     // Calculate Pearson correlation coefficient
-    const correlationCoefficient = jStat.corrcoeff(standardizedColA, standardizedColB);
+    const correlationCoefficient = jStat.anovafscore(Object.values(groups));
 
     // // Calculate p-value for the correlation coefficient
     const n = standardizedColA.length;
-    const pValue = jStat.ttest(correlationCoefficient, n - 2, 2);
+    const pValue = jStat.anovaftest(...Object.values(groups));
+    // const pValue = jStat.ttest(correlationCoefficient, n - 2, 2);
 
     // // Fisher transformation to Z-score
     // const transformed = 0.5 * Math.log((1 + correlationCoefficient) / (1 - correlationCoefficient));
@@ -79,6 +89,7 @@ export const getCorrelationCoeffs = (dataByFeatureRows, columnMetadata, outcome)
             featureValues.push(value);
             dataByOutcomeValues[outcomeValue] = featureValues
         })
+        console.log('>>', feature, Object.values(dataByOutcomeValues));
         const corrCoefs = calculateCorrelationNumericField(Object.values(dataByOutcomeValues))
         // const  corrCoefs = calculateCorrelationAndPValue(totalSample[feature]['values'], totalSample[feature][outcome])
         correlationMetrics[feature] = corrCoefs;
@@ -98,6 +109,10 @@ export const getCorrelationCoeffs = (dataByFeatureRows, columnMetadata, outcome)
     return correlationMetrics;
 }
 
+const handleNull = (val) => {
+    return (val !== '' || val !== 'null') ? val : undefined 
+}
+
 export const getDataByFeatures = (data, features, outcome) => {
     const groupedDataByOutcome = {}
     groupedDataByOutcome['Sample'] = {}
@@ -105,7 +120,8 @@ export const getDataByFeatures = (data, features, outcome) => {
         groupedDataByOutcome['Sample'][feature] = []
     })
     data.forEach((row) => {
-        const outcomeValue = row[outcome];
+        console.log(row);
+        const outcomeValue = handleNull(row[outcome]);
         if(outcomeValue || outcomeValue === 0){
             if(!groupedDataByOutcome[outcomeValue]) {
                 groupedDataByOutcome[outcomeValue] = {}
@@ -114,7 +130,7 @@ export const getDataByFeatures = (data, features, outcome) => {
                 })
             }
             features.forEach((feature) => {
-                const featureValue = row[feature];
+                const featureValue = handleNull(row[feature]);
                 if(featureValue || featureValue === 0) {
                     groupedDataByOutcome[outcomeValue][feature].push(featureValue);
                     groupedDataByOutcome['Sample'][feature].push(featureValue);
@@ -140,7 +156,7 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
         categoricalUniqueValues[catFeature] = new Map();
     })
     data.forEach((row) => {
-        const outcomeValue = row[outcome];
+        const outcomeValue = handleNull(row[outcome]);
         if(outcomeValue || outcomeValue === 0){
             if(!outcomeValues.get(outcomeValue)) outcomeValues.set(outcomeValue, 1);
             const outcomeValueIdx = Array.from(outcomeValues.keys()).findIndex((val) => val === outcomeValue);
@@ -152,7 +168,7 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
                 })
             }
             columnMetadata.numeric.forEach((feature) => {
-                const featureValue = row[feature];
+                const featureValue = handleNull(row[feature]);
                 if(featureValue || featureValue === 0) {
                     groupedDataByOutcome[outcomeValue][feature]['values'].push(featureValue);
                     groupedDataByOutcome['Sample'][feature]['values'].push(featureValue);
@@ -160,7 +176,7 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
                 }
             })
             columnMetadata.category.forEach((feature) => {
-                const featureValue = row[feature];
+                const featureValue = handleNull(row[feature]);
                 if(featureValue || featureValue === 0) {
                     const catFeatureValues = categoricalUniqueValues[feature];
                     if(!catFeatureValues.get(featureValue)) catFeatureValues.set(featureValue, 1);
@@ -179,6 +195,7 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
 export const calculateStatisticsByCategory = (dataByFeatureRows, columnMetadata, outcomeCol) => {
     // Group data by category
     const statsByOutcome = {}
+    console.log(dataByFeatureRows)
     // Calculate statistics for each category
     Object.keys(dataByFeatureRows).forEach((outcome) => {
         const statsByFeature = {}
@@ -219,7 +236,7 @@ export const calculateStatisticsByCategory = (dataByFeatureRows, columnMetadata,
         pvalueByFeature[numericField] = {
             ...corrCoefs
         }
-    };
+    }
     for (const catField of columnMetadata.category) {
         const values = valuesByFeature[catField]['values_encoded'];
         const corrCoefs = calculateCorrelationAndPValue(values, valuesByFeature[catField][outcomeCol])

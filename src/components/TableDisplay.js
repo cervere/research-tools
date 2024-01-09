@@ -5,38 +5,6 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import {  generateCsv, download } from 'export-to-csv'; //or use your library of choice here
 import { data } from './makeData';
 
-//defining columns outside of the component is fine, is stable
-const columns = [
-  {
-    accessorKey: 'id',
-    header: 'ID',
-    size: 40,
-  },
-  {
-    accessorKey: 'firstName',
-    header: 'First Name',
-    size: 120,
-  },
-  {
-    accessorKey: 'lastName',
-    header: 'Last Name',
-    size: 120,
-  },
-  {
-    accessorKey: 'company',
-    header: 'Company',
-    size: 300,
-  },
-  {
-    accessorKey: 'city',
-    header: 'City',
-  },
-  {
-    accessorKey: 'country',
-    header: 'Country',
-    size: 220,
-  },
-];
 
 const csvOptions = {
   fieldSeparator: ',',

@@ -1,23 +1,40 @@
 // CsvUploader.js
 import React, { useState } from 'react';
-import Papa from 'papaparse';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import InputAdornment from '@mui/material/InputAdornment';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
 
-function CsvUploader({ onDataParsed }) {
+function CsvUploader({ onFileUpload }) {
+  
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      dynamicTyping: true,
-      complete: (result) => {
-        console.log(result.meta);
-        onDataParsed(result);
-      },
-    });
+    onFileUpload(file);
   };
 
   return (
-    <input type="file" accept=".csv" onChange={handleFileUpload} />
+    <OutlinedInput
+        id="outlined-adornment-password"
+        type="file"
+        accept=".csv" 
+        onChange={handleFileUpload} 
+        endAdornment={<InputAdornment position="end">
+            <Tooltip title="Accepted formats: CSV">
+              <IconButton
+                aria-label="toggle password visibility"
+                // onClick={handleAddAll}
+                edge="end"
+              >
+                <DoneAllIcon />
+              </IconButton>
+            </Tooltip>
+          </InputAdornment>
+        }
+        label="Filter columns to add at once"
+      />
+    // <input type="file" accept=".csv" onChange={handleFileUpload} />
   );
 }
 

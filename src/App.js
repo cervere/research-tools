@@ -2,6 +2,7 @@ import React, { useEffect, StrictMode }  from 'react';
 import './App.css';
 import HomePage from './components/HomePage';
 import {HashRouter as Router} from "react-router-dom" 
+import { DataProvider } from './context/DataContext.js';
 
 const App = () => {
 
@@ -37,8 +38,8 @@ const App = () => {
           body.classList.contains(collapsedClass) &&
           window.matchMedia("(min-width: 768px)").matches
         ) {
-          const tooltip = this.querySelector("span").textContent;
-          this.setAttribute("title", tooltip);
+          // const tooltip = this.querySelector("span")?.textContent;
+          this.setAttribute("title", switchLabelText);
         } else {
           this.removeAttribute("title");
         }
@@ -66,8 +67,10 @@ const App = () => {
 
   return (
 <StrictMode> 
-    <Router>     
+    <Router>
+    <DataProvider>
       <HomePage />
+    </DataProvider>
     </Router> 
 </StrictMode>
   )
