@@ -1,6 +1,7 @@
 import jStat from 'jstat';
 import {chiSquaredGoodnessOfFit} from 'simple-statistics';
 import anova1 from '@stdlib/stats-anova1';
+import chi2test from '@stdlib/stats-chi2test';
 
 const mean = arr => arr.reduce((acc, val) => acc + val, 0) / arr.length;
 
@@ -65,16 +66,36 @@ const calculateCorrelationNumericField = (values) => {
     return {coef: anovaResult.F, pValue: anovaResult.p}
 }
 
-const calculateCorrelationCategoryField = (observed) => {
+// Assuming colA and colB as two columns with categorical values, create a contingency table matrix
+const createContingencyTable = (colA, colB, possibleColBValues) => {
+    const contingencyTable = {};
+    for (let i = 0; i < colA.length; i++) {
+        if (!contingencyTable[colA[i]]) {
+            contingencyTable[colA[i]] = {};
+            possibleColBValues.forEach((value) => {
+                contingencyTable[colA[i]][value] = 0;
+            })
+        }
+        if (!contingencyTable[colA[i]][colB[i]]) {
+            contingencyTable[colA[i]][colB[i]] = 1;
+        } else {
+            contingencyTable[colA[i]][colB[i]]++;
+        }
+    }
+    return contingencyTable;
+}
+
+const calculateCorrelationCategoryField = (colA, colB, possibleColBValues) => {
     // Assuming outcome is categorical
     // Perform Chi-Square test
-    const chiSquareResult = chiSquaredGoodnessOfFit(observed);
+    const contingencyTable = createContingencyTable(colA, colB, possibleColBValues);
+    // returns as {a: {x: 1, y: 1}, b: {x:1, y: 1}}
+    const contingencyTableArr = Object.keys(contingencyTable)
+                                .map((k) => Object.values(contingencyTable[k])) 
+    
+    const chiSquareResult = chi2test(contingencyTableArr).toJSON();
 
-    console.log('Chi-Square Test Result:');
-    console.log('Chi-Square Statistic:', chiSquareResult);
-    console.log('Degrees of Freedom:', chiSquareResult.df);
-    console.log('P-Value:', chiSquareResult.p);
-    return {coef: chiSquareResult.df, pValue: chiSquareResult.p}
+    return {coef: chiSquareResult.statistic, pValue: chiSquareResult.pValue}
 }
 
 export const getCorrelationCoeffs = (dataByFeatureRows, columnMetadata, outcome) => {
@@ -120,7 +141,6 @@ export const getDataByFeatures = (data, features, outcome) => {
         groupedDataByOutcome['Sample'][feature] = []
     })
     data.forEach((row) => {
-        console.log(row);
         const outcomeValue = handleNull(row[outcome]);
         if(outcomeValue || outcomeValue === 0){
             if(!groupedDataByOutcome[outcomeValue]) {
@@ -195,7 +215,7 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
 export const calculateStatisticsByCategory = (dataByFeatureRows, columnMetadata, outcomeCol) => {
     // Group data by category
     const statsByOutcome = {}
-    console.log(dataByFeatureRows)
+    const uniqueOutcomeValues = Object.keys(dataByFeatureRows).filter((val) => val !== 'Sample') 
     // Calculate statistics for each category
     Object.keys(dataByFeatureRows).forEach((outcome) => {
         const statsByFeature = {}
@@ -239,10 +259,11 @@ export const calculateStatisticsByCategory = (dataByFeatureRows, columnMetadata,
     }
     for (const catField of columnMetadata.category) {
         const values = valuesByFeature[catField]['values_encoded'];
-        const corrCoefs = calculateCorrelationAndPValue(values, valuesByFeature[catField][outcomeCol])
+        const corrCoefs = calculateCorrelationCategoryField(values, valuesByFeature[catField][outcomeCol], uniqueOutcomeValues)
         pvalueByFeature[catField] = {
             ...corrCoefs
         }
+
     };
     statsByOutcome['pvalue'] = pvalueByFeature;
     return statsByOutcome;

@@ -32,7 +32,6 @@ const HomePage = () => {
   const [links, setLinks] = useState([]);
 
   useEffect(() => {
-    console.log(showStatistics, figuresReady);
     setLinks([
       {
         route: "/articles",
