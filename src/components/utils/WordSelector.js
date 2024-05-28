@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Button from '@mui/material/Button';
 import FilterInputComponent from './FilterInputComponent';
 
-const WordSelector = ({ words, onFinalize, actionLabel }) => {
+const WordSelector = ({ words, onFinalize, actionLabel, includeAllBtn }) => {
   const [includedWords, setIncludedWords] = useState();
   const [excludedWords, setExcludedWords] = useState();
   const [excludeFilterInput, setExcludeFilterInput] = React.useState();
@@ -78,6 +78,15 @@ const WordSelector = ({ words, onFinalize, actionLabel }) => {
         variant="contained" color="primary"> 
         {actionLabel} 
       </Button>
+      {includeAllBtn && excludedWords?.length > 0 && 
+            <Button sx={{margin: "10px"}} 
+            onClick={() => {
+              onFinalize([[...includedWords, ...excludedWords], []]);
+            }} 
+            variant="contained" color="primary"> 
+            Include All 
+          </Button>
+      }
         <h3>{words[0].label} {includedWords && `(${includedWords.length})`} </h3>
         <FilterInputComponent 
         filterInput={includeFilterInput}

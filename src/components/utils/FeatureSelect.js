@@ -1,10 +1,20 @@
 // Component FeatureSelect
 import React from 'react';
 import WordSelector from './WordSelector.js';
+import TextField from '@mui/material/TextField';
 
-const FeatureSelect = ({ includedExcludedColumns, columnsFound, onFinalize }) => {
+
+const FeatureSelect = ({ includedExcludedColumns, columnsFound, onFinalize, setSkipFirstNLines}) => {
 
   return (
+    <div>
+    <TextField 
+    placeholder='Skip N lines for header'
+    onChange={(e) => {
+      const inp = Number(e.target.value)
+      setSkipFirstNLines(inp || 0)
+    }}
+    />
     <WordSelector 
       words={[
         {
@@ -18,7 +28,9 @@ const FeatureSelect = ({ includedExcludedColumns, columnsFound, onFinalize }) =>
       ]}
       onFinalize={onFinalize}
       actionLabel="Confirm Selection"
+      includeAllBtn
     />
+    </div>
   );
 }
 

@@ -24,7 +24,7 @@ const DataProvider = ({ children }) => {
   const [outcome, setOutcome] = useState();
   const [columnMetadata, setColumnMetadata] = useState();
   const [showStatistics, setShowStatistics] = useState(false);
-
+  const [skipFirstNLines, setSkipFirstNLines] = useState(0)
   useEffect(() => {
     if(newFile) {
       refreshContent();
@@ -32,20 +32,23 @@ const DataProvider = ({ children }) => {
   }, [newFile])
 
   useEffect(() => {
+    console.log(skipFirstNLines, uploadedFile)
     if(uploadedFile) {
       Papa.parse(uploadedFile, {
         header: true,
         dynamicTyping: true,
         skipEmptyLines: true,
+        skipFirstNLines,
         complete: (result) => {
           handleDataParsed(result);
         },
       });
     }
-  }, [uploadedFile])
+  }, [uploadedFile, skipFirstNLines])
 
   const handleDataParsed = (parsedResult) => {
     setParsedResult(parsedResult);
+    console.log(parsedResult.meta)
     const parsedColumns = parsedResult.meta?.fields;
     parsedColumns && setColumnsFound(parsedColumns);
     const parsedData = parsedResult.data;
@@ -145,7 +148,8 @@ const DataProvider = ({ children }) => {
       dataToAnalyze, refreshContent,
       outcome, setOutcome,
       columnMetadata, setColumnMetadata,
-      onValidateDataTypes, showStatistics, setShowStatistics
+      onValidateDataTypes, showStatistics, setShowStatistics,
+      skipFirstNLines, setSkipFirstNLines
        }}>
       {children}
     </DataContext.Provider>

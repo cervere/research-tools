@@ -3,7 +3,7 @@ import React, { useContext, useState} from 'react';
 import { DataContext } from '../context/DataContext.js';
 import Button from '@mui/material/Button';
 import TableDisplay from './TableDisplay';
-import { getDataByFeatures, getDataByFeaturesComplex, calculateStatisticsByCategory } from '../utils/Stats';
+import { getDataByFeatures, getDataByFeaturesComplex, calculateStatisticsByCategory, getPairs } from '../utils/Stats';
 import { mySplice } from '../utils/ArrayUtils.js';
 
 function Table1() {
@@ -53,6 +53,24 @@ function Table1() {
             size: 40,
         }]
       })
+      const valuePairs = getPairs(outcomeValues.filter((value) => value !== 'Sample' && value !== 'pvalue').sort());
+
+      const effectSizes = {}
+ 
+
+      outcomeHeader.push({
+        id : 'effectsizes',
+        header: 'Effect size',
+        columns: valuePairs.map((pair) => {
+          const key = `${pair[0]} vs ${pair[1]}`;
+          return {
+            accessorKey: `${key.replace(' ', '_')}`,
+            header: key,
+            size: 40,
+          } 
+        })
+      })
+
       return [
         {id: 'first-level-feature', header: '', columns: featureHeader},
         {id: 'first-level-sample', header: 'Sample', columns: sampleHeader},
@@ -70,6 +88,12 @@ function Table1() {
       row[`${outcome}`]['N'] = `${stats[outcome][numericField].notNullCount}`;
     })
     row[`${outcome}_pvalue`] = stats['pvalue'][numericField].pValue.toFixed(3);
+    const effectSizes = stats['pvalue'][numericField].effectSizes;
+    const valuePairs = getPairs(outcomeValues.filter((value) => value !== 'Sample' && value !== 'pvalue').sort());
+    valuePairs.forEach((pair) => {
+      const key = `${pair[0]} vs ${pair[1]}`;
+      row[`${key.replace(' ', '_')}`] = effectSizes[key].toFixed(2); 
+    })
     return row
   }
 

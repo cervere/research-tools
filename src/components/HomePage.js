@@ -4,6 +4,9 @@ import CollapseButton from './CollapseButton';
 import AutoStoriesIcon from '@mui/icons-material/AutoStories';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SearchIcon from '@mui/icons-material/Search';
+import MergeIcon from '@mui/icons-material/Merge';
+import WaterDropIcon from '@mui/icons-material/WaterDrop';
+import RadarIcon from '@mui/icons-material/Radar';
 // import { ReactComponent as Logo } from './logo-cropped.svg';
 import logoImg from './logo.png';
 import {
@@ -16,12 +19,15 @@ import Dashboard from './Dashboard';
 import Figures from './Figures';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import PrepareData from './PrepareData';
+import MergeData from './MergeData';
 import DeriveColumns from './utils/DeriveColumns';
 import Button from '@mui/material/Button';
 import DataViz from './DataViz';
 import BubbleChartIcon from '@mui/icons-material/BubbleChart';
 import TableChartIcon from '@mui/icons-material/TableChart';
-
+import Consultation from './Consultation';
+import { BoxplotViolinMirrorDemo } from './viz/raincloud/BoxplotViolinMirrorDemo';
+import { RadarPlotContainer } from './viz/radar/RadarPlotContainer';
 
 const HomePage = () => {
   const { preparedData, setPreparedData, 
@@ -94,6 +100,33 @@ const HomePage = () => {
                 </li>
                 ))
               }
+              <li className="menu-heading">
+                <h3>Standalone Tools</h3>
+              </li>
+              <li key={'radar-tool'}>
+                <Link to="/radar">
+                  <RadarIcon />
+                  <span>Radar Plot</span>
+                </Link>
+              </li>
+              <li key={'rainplot-tool'}>
+                <Link to="/rainplot">
+                  <WaterDropIcon />
+                  <span>RainCloud Plot</span>
+                </Link>
+              </li>
+              <li key={'merge-tool'}>
+                <Link to="/merge">
+                  <MergeIcon />
+                  <span>Merge</span>
+                </Link>
+                </li>
+                {/* <li key={'consult'}>
+                <Link to="/consult">
+                  <MergeIcon />
+                  <span>Consultation</span>
+                </Link>
+                </li>   */}
               <li>
                 <div className="switch" style={{display: 'none'}}>
                   <input type="checkbox" id="mode" defaultChecked />
@@ -159,6 +192,30 @@ const HomePage = () => {
           path="/figures"
           element={
             <Figures preparedData={preparedData} />
+          }
+          />
+          <Route 
+          path="/radar"
+          element={
+            <RadarPlotContainer />
+          }
+          />
+          <Route 
+          path="/rainplot"
+          element={
+            <BoxplotViolinMirrorDemo />
+          }
+          />
+          <Route 
+          path="/merge"
+          element={
+            <MergeData />
+          }
+          />
+          <Route 
+          path="/consult"
+          element={
+            <Consultation />
           }
           />
         </Routes>

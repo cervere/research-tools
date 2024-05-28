@@ -20,6 +20,15 @@ const standardize = arr => {
   return arr.map(val => (val - avg) / sd);
 };
 
+export const getPairs = (list) => {
+    const pairs = []
+    for(let i=0; i<list.length-1; i++) {
+        for(let j=i+1; j<list.length; j++){
+            pairs.push([list[i], list[j]])
+        }
+    }
+    return pairs
+}
 
 export const calculateCorrelationAndPValue = (colA, colB) => {    
     // Standardize both columns
@@ -41,6 +50,21 @@ export const calculateCorrelationAndPValue = (colA, colB) => {
     // // Calculate p-value for the correlation coefficient
     const n = standardizedColA.length;
     const pValue = jStat.anovaftest(...Object.values(groups));
+    const valuePairs = getPairs(Object.keys(groups).sort());
+
+    console.log('>>> ', groups)
+    const effectSizes = {}
+
+    for(const pair of valuePairs) {
+        const key = `${pair[0]} vs ${pair[1]}`;
+        const refStd = jStat.stdev(groups[pair[0]]);
+        if(refStd !== 0) {
+            const effectSize = (jStat.mean(groups[pair[0]]) - jStat.mean(groups[pair[1]]))/refStd
+            effectSizes[key] = effectSize
+        }
+    }
+
+
     // const pValue = jStat.ttest(correlationCoefficient, n - 2, 2);
 
     // // Fisher transformation to Z-score
@@ -54,7 +78,7 @@ export const calculateCorrelationAndPValue = (colA, colB) => {
 
     // // Calculate the p-value from the Z-score
     // const pValue = 2 * jStat.normal.cdf(-Math.abs(zScore)); // For two-tailed test
-    return {correlationCoefficient, pValue}
+    return {correlationCoefficient, pValue, effectSizes}
 }
 
 const calculateCorrelationNumericField = (values) => {
@@ -90,10 +114,12 @@ const calculateCorrelationCategoryField = (colA, colB, possibleColBValues) => {
     // Perform Chi-Square test
     const contingencyTable = createContingencyTable(colA, colB, possibleColBValues);
     // returns as {a: {x: 1, y: 1}, b: {x:1, y: 1}}
+    console.log(contingencyTable)
     const contingencyTableArr = Object.keys(contingencyTable)
                                 .map((k) => Object.values(contingencyTable[k])) 
     
     const chiSquareResult = chi2test(contingencyTableArr).toJSON();
+    console.log(chiSquareResult)
 
     return {coef: chiSquareResult.statistic, pValue: chiSquareResult.pValue}
 }
@@ -117,7 +143,7 @@ export const getCorrelationCoeffs = (dataByFeatureRows, columnMetadata, outcome)
     })
     columnMetadata.category.forEach((feature) => {
         const dataByOutcomeValues = {};
-        const standardizedValues = standardize(totalSample[feature]['values_encoded']);
+        const standardizedValues = totalSample[feature].values //standardize(totalSample[feature]['values_encoded']);
         standardizedValues.forEach((value, i) => {
             const outcomeValue = totalSample[feature][outcome][i]
             const featureValues = dataByOutcomeValues[outcomeValue] || [];
@@ -179,7 +205,7 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
         const outcomeValue = handleNull(row[outcome]);
         if(outcomeValue || outcomeValue === 0){
             if(!outcomeValues.get(outcomeValue)) outcomeValues.set(outcomeValue, 1);
-            const outcomeValueIdx = Array.from(outcomeValues.keys()).findIndex((val) => val === outcomeValue);
+            // const outcomeValueIdx = Array.from(outcomeValues.keys()).findIndex((val) => val === outcomeValue);
             if(!groupedDataByOutcome[outcomeValue]) {
                 groupedDataByOutcome[outcomeValue] = {}
                 columnMetadata.fields.forEach((feature) => {
@@ -192,7 +218,8 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
                 if(featureValue || featureValue === 0) {
                     groupedDataByOutcome[outcomeValue][feature]['values'].push(featureValue);
                     groupedDataByOutcome['Sample'][feature]['values'].push(featureValue);
-                    groupedDataByOutcome['Sample'][feature][outcome].push(outcomeValueIdx);
+                    // groupedDataByOutcome['Sample'][feature][outcome].push(outcomeValueIdx);
+                    groupedDataByOutcome['Sample'][feature][outcome].push(outcomeValue);
                 }
             })
             columnMetadata.category.forEach((feature) => {
@@ -204,7 +231,8 @@ export const getDataByFeaturesComplex = (data, columnMetadata, outcome) => {
                     groupedDataByOutcome[outcomeValue][feature]['values'].push(featureValue);
                     groupedDataByOutcome['Sample'][feature]['values'].push(featureValue);
                     groupedDataByOutcome['Sample'][feature]['values_encoded'].push(catFeatureValueIdx);
-                    groupedDataByOutcome['Sample'][feature][outcome].push(outcomeValueIdx);
+                    // groupedDataByOutcome['Sample'][feature][outcome].push(outcomeValueIdx);
+                    groupedDataByOutcome['Sample'][feature][outcome].push(outcomeValue);
                 }
             })
         }
